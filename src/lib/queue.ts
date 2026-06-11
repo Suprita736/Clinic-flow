@@ -114,6 +114,8 @@ export async function callNext(): Promise<void> {
 
 export async function skipPatient(id: string): Promise<void> {
   await supabase.from("queue_entries").update({ status: "skipped" }).eq("id", id);
+  // Nudge clinic_state so every patient's live position recalculates.
+  await supabase.from("clinic_state").update({ updated_at: new Date().toISOString() }).eq("id", 1);
 }
 
 export async function completePatient(id: string): Promise<void> {
