@@ -62,7 +62,7 @@ function PatientDashboard() {
     load();
   }, [load]);
 
-  useRealtimeQueue(load);
+  useRealtimeQueue(load, { userId: user?.id });
 
   const handleJoin = async () => {
     if (!user) return;
