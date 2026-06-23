@@ -29,7 +29,6 @@ const registerSchema = z
     email: z.string().trim().email("Invalid email address").max(255),
     password: z.string().min(6, "Password must be at least 6 characters").max(72),
     confirmPassword: z.string(),
-    role: z.enum(["patient", "receptionist"]),
   })
   .refine((d) => d.password === d.confirmPassword, {
     message: "Passwords do not match",
@@ -45,10 +44,9 @@ function AuthPage() {
   const navigate = useNavigate();
   const { refresh } = useAuth();
   const [loading, setLoading] = useState(false);
-  const [role, setRole] = useState<AppRole>("patient");
 
-  const redirectByRole = (r: AppRole | null) => {
-    navigate({ to: r === "receptionist" ? "/receptionist" : "/patient" });
+  const redirectByRole = () => {
+    navigate({ to: "/receptionist" });
   };
 
   const handleRegister = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -60,7 +58,6 @@ function AuthPage() {
       email: fd.get("email"),
       password: fd.get("password"),
       confirmPassword: fd.get("confirmPassword"),
-      role,
     });
     if (!parsed.success) {
       toast.error(parsed.error.issues[0].message);
@@ -77,33 +74,38 @@ function AuthPage() {
           data: {
             full_name: parsed.data.fullName,
             phone: parsed.data.phone,
-            role: parsed.data.role,
+            role: "receptionist",
           },
         },
       });
+      console.log("[AUTH:register] signUp result:", { userId: data.user?.id, hasSession: !!data.session, error });
       if (error) throw error;
       const uid = data.user?.id;
       if (!data.session || !uid) {
+        console.warn("[AUTH:register] No session returned — email confirmation may be enabled. Profile/role NOT created yet.");
         toast.success("Account created. Please sign in to continue.");
         setLoading(false);
         return;
       }
 
-      const [{ error: pErr }, { error: rErr }] = await Promise.all([
+      const [profileResult, roleResult] = await Promise.all([
         supabase.from("profiles").upsert({
           id: uid,
           full_name: parsed.data.fullName,
           phone: parsed.data.phone,
         }),
-        supabase.from("user_roles").insert({ user_id: uid, role: parsed.data.role }),
+        supabase.from("user_roles").insert({ user_id: uid, role: "receptionist" }),
       ]);
-      if (pErr) throw pErr;
-      if (rErr) throw rErr;
+      console.log("[AUTH:register] profile upsert:", { data: profileResult.data, error: profileResult.error });
+      console.log("[AUTH:register] role insert:", { data: roleResult.data, error: roleResult.error });
+      if (profileResult.error) throw profileResult.error;
+      if (roleResult.error) throw roleResult.error;
 
       await refresh();
       toast.success("Welcome to ClinicFlow!");
-      redirectByRole(parsed.data.role);
+      redirectByRole();
     } catch (err) {
+      console.error("[AUTH:register] error:", err);
       toast.error(err instanceof Error ? err.message : "Something went wrong");
     } finally {
       setLoading(false);
@@ -130,16 +132,43 @@ function AuthPage() {
       });
       if (error) throw error;
       const uid = data.user.id;
-      const { data: roleRow } = await supabase
+      console.log("[AUTH:login] signed in, uid:", uid);
+
+      let { data: roleRow } = await supabase
         .from("user_roles")
         .select("role")
         .eq("user_id", uid)
         .limit(1)
         .maybeSingle();
+      console.log("[AUTH:login] roleRow from DB:", roleRow);
+
+      // If no role exists in user_roles, create it from user_metadata (set during signUp)
+      if (!roleRow) {
+        const metaRole = data.user.user_metadata?.role as AppRole | undefined;
+        console.warn("[AUTH:login] No role in user_roles! user_metadata.role:", metaRole);
+        if (metaRole === "receptionist" || metaRole === "patient") {
+          // Also create the profile if missing
+          const [profileResult, roleResult] = await Promise.all([
+            supabase.from("profiles").upsert({
+              id: uid,
+              full_name: (data.user.user_metadata?.full_name as string) || "",
+              phone: (data.user.user_metadata?.phone as string) || "",
+            }),
+            supabase.from("user_roles").insert({ user_id: uid, role: metaRole }),
+          ]);
+          console.log("[AUTH:login] auto-created profile:", { error: profileResult.error });
+          console.log("[AUTH:login] auto-created role:", { error: roleResult.error });
+          if (!roleResult.error) {
+            roleRow = { role: metaRole };
+          }
+        }
+      }
+
       await refresh();
       toast.success("Signed in");
-      redirectByRole((roleRow?.role as AppRole | undefined) ?? "patient");
+      redirectByRole();
     } catch (err) {
+      console.error("[AUTH:login] error:", err);
       toast.error(err instanceof Error ? err.message : "Invalid credentials");
     } finally {
       setLoading(false);
@@ -227,23 +256,6 @@ function AuthPage() {
               {/* Register */}
               <TabsContent value="register" className="mt-6">
                 <form onSubmit={handleRegister} className="space-y-4">
-                  <div>
-                    <Label className="mb-2 block">Choose Role</Label>
-                    <div className="grid grid-cols-2 gap-3">
-                      <RoleOption
-                        active={role === "patient"}
-                        onClick={() => setRole("patient")}
-                        icon={<User className="h-4 w-4" />}
-                        label="Patient"
-                      />
-                      <RoleOption
-                        active={role === "receptionist"}
-                        onClick={() => setRole("receptionist")}
-                        icon={<Stethoscope className="h-4 w-4" />}
-                        label="Receptionist"
-                      />
-                    </div>
-                  </div>
                   <div className="space-y-1.5">
                     <Label htmlFor="reg-name">Name</Label>
                     <Input id="reg-name" name="fullName" placeholder="Jane Doe" autoComplete="name" />
@@ -279,35 +291,4 @@ function AuthPage() {
   );
 }
 
-function RoleOption({
-  active,
-  onClick,
-  icon,
-  label,
-}: {
-  active: boolean;
-  onClick: () => void;
-  icon: React.ReactNode;
-  label: string;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`flex items-center gap-2.5 rounded-2xl border px-4 py-3 text-sm font-medium transition-all ${
-        active
-          ? "border-primary bg-primary text-primary-foreground shadow-soft"
-          : "border-border bg-card text-foreground hover:border-primary/40"
-      }`}
-    >
-      <span
-        className={`grid h-7 w-7 place-items-center rounded-lg ${
-          active ? "bg-primary-foreground/15" : "bg-secondary"
-        }`}
-      >
-        {icon}
-      </span>
-      {label}
-    </button>
-  );
-}
+

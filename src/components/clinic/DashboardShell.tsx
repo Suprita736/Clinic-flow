@@ -9,11 +9,13 @@ export function DashboardShell({
   title,
   subtitle,
   badge,
+  hideHeader = false,
   children,
 }: {
   title: string;
   subtitle: string;
   badge: string;
+  hideHeader?: boolean;
   children: ReactNode;
 }) {
   const { signOut } = useAuth();
@@ -26,18 +28,30 @@ export function DashboardShell({
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b border-border/60 bg-card/70 backdrop-blur-md">
-        <div className="mx-auto flex w-[min(1180px,calc(100%-2rem))] items-center justify-between gap-4 py-4">
-          <Link to="/">
-            <Logo />
-          </Link>
-          <Button variant="pillOutline" size="sm" onClick={handleSignOut}>
-            <LogOut className="h-4 w-4" /> Sign out
-          </Button>
-        </div>
-      </header>
+      {!hideHeader && (
+        <header className="border-b border-border/60 bg-card/70 backdrop-blur-md">
+          <div className="mx-auto flex w-[min(1180px,calc(100%-2rem))] items-center justify-between gap-4 py-4">
+            <div className="flex items-center gap-6">
+              <Link to="/">
+                <Logo />
+              </Link>
+              <nav className="hidden sm:flex items-center gap-4 text-sm font-medium">
+                <Link to="/receptionist" className="text-muted-foreground hover:text-foreground transition-colors [&.active]:text-foreground">
+                  Reception
+                </Link>
+                <Link to="/analytics" className="text-muted-foreground hover:text-foreground transition-colors [&.active]:text-foreground">
+                  Intelligence
+                </Link>
+              </nav>
+            </div>
+            <Button variant="pillOutline" size="sm" onClick={handleSignOut}>
+              <LogOut className="h-4 w-4" /> Sign out
+            </Button>
+          </div>
+        </header>
+      )}
 
-      <main className="mx-auto w-[min(1180px,calc(100%-2rem))] py-8 sm:py-12">
+      <main className={`mx-auto w-[min(1180px,calc(100%-2rem))] ${hideHeader ? 'py-4' : 'py-8 sm:py-12'}`}>
         <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-4 sm:flex sm:items-end sm:justify-between">
           <div className="min-w-0">
             <span className="inline-flex items-center gap-2 rounded-full bg-mint px-3 py-1 text-xs font-semibold text-mint-foreground">

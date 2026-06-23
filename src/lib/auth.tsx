@@ -8,7 +8,7 @@ import {
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 
-export type AppRole = "patient" | "receptionist";
+export type AppRole = "receptionist";
 
 interface AuthState {
   session: Session | null;
@@ -22,13 +22,14 @@ interface AuthState {
 const AuthContext = createContext<AuthState | undefined>(undefined);
 
 async function fetchRole(userId: string): Promise<AppRole | null> {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("user_roles")
     .select("role")
     .eq("user_id", userId)
     .order("created_at", { ascending: true })
     .limit(1)
     .maybeSingle();
+  console.log("[AuthProvider:fetchRole]", { userId, data, error });
   return (data?.role as AppRole | undefined) ?? null;
 }
 
@@ -39,14 +40,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loadRole = async (uid: string | undefined) => {
     if (!uid) {
+      console.log("[AuthProvider:loadRole] no uid, setting role=null");
       setRole(null);
       return;
     }
     const r = await fetchRole(uid);
+    console.log("[AuthProvider:loadRole] resolved role:", r, "for uid:", uid);
     setRole(r);
   };
 
   const refresh = async () => {
+    console.log("[AuthProvider:refresh] called");
     const { data } = await supabase.auth.getSession();
     setSession(data.session);
     await loadRole(data.session?.user.id);
@@ -56,6 +60,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let active = true;
 
     const { data: sub } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      console.log("[AuthProvider:onAuthStateChange]", _event, { userId: newSession?.user?.id });
       if (!active) return;
       setSession(newSession);
       // Defer Supabase calls to avoid deadlock inside the callback.

@@ -16,7 +16,7 @@ export function Navbar() {
   const [open, setOpen] = useState(false);
   const { session, role } = useAuth();
 
-  const dashboardHref = role === "receptionist" ? "/receptionist" : "/patient";
+  const dashboardHref = role === "receptionist" ? "/receptionist" : "/";
 
   return (
     <header className="sticky top-0 z-50 w-full">

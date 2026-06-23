@@ -13,8 +13,13 @@ import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as TrackTrackingCodeRouteImport } from './routes/track.$trackingCode'
 import { Route as AuthenticatedReceptionistRouteImport } from './routes/_authenticated/receptionist'
-import { Route as AuthenticatedPatientRouteImport } from './routes/_authenticated/patient'
+import { Route as AuthenticatedAnalyticsRouteImport } from './routes/_authenticated/analytics'
+import { Route as AuthenticatedReceptionistIndexRouteImport } from './routes/_authenticated/receptionist/index'
+import { Route as AuthenticatedReceptionistPatientsRouteImport } from './routes/_authenticated/receptionist/patients'
+import { Route as AuthenticatedReceptionistIntelligenceRouteImport } from './routes/_authenticated/receptionist/intelligence'
+import { Route as AuthenticatedReceptionistDoctorsRouteImport } from './routes/_authenticated/receptionist/doctors'
 
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
@@ -35,31 +40,69 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TrackTrackingCodeRoute = TrackTrackingCodeRouteImport.update({
+  id: '/track/$trackingCode',
+  path: '/track/$trackingCode',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedReceptionistRoute =
   AuthenticatedReceptionistRouteImport.update({
     id: '/receptionist',
     path: '/receptionist',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
-const AuthenticatedPatientRoute = AuthenticatedPatientRouteImport.update({
-  id: '/patient',
-  path: '/patient',
+const AuthenticatedAnalyticsRoute = AuthenticatedAnalyticsRouteImport.update({
+  id: '/analytics',
+  path: '/analytics',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedReceptionistIndexRoute =
+  AuthenticatedReceptionistIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedReceptionistRoute,
+  } as any)
+const AuthenticatedReceptionistPatientsRoute =
+  AuthenticatedReceptionistPatientsRouteImport.update({
+    id: '/patients',
+    path: '/patients',
+    getParentRoute: () => AuthenticatedReceptionistRoute,
+  } as any)
+const AuthenticatedReceptionistIntelligenceRoute =
+  AuthenticatedReceptionistIntelligenceRouteImport.update({
+    id: '/intelligence',
+    path: '/intelligence',
+    getParentRoute: () => AuthenticatedReceptionistRoute,
+  } as any)
+const AuthenticatedReceptionistDoctorsRoute =
+  AuthenticatedReceptionistDoctorsRouteImport.update({
+    id: '/doctors',
+    path: '/doctors',
+    getParentRoute: () => AuthenticatedReceptionistRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
-  '/patient': typeof AuthenticatedPatientRoute
-  '/receptionist': typeof AuthenticatedReceptionistRoute
+  '/analytics': typeof AuthenticatedAnalyticsRoute
+  '/receptionist': typeof AuthenticatedReceptionistRouteWithChildren
+  '/track/$trackingCode': typeof TrackTrackingCodeRoute
+  '/receptionist/doctors': typeof AuthenticatedReceptionistDoctorsRoute
+  '/receptionist/intelligence': typeof AuthenticatedReceptionistIntelligenceRoute
+  '/receptionist/patients': typeof AuthenticatedReceptionistPatientsRoute
+  '/receptionist/': typeof AuthenticatedReceptionistIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
-  '/patient': typeof AuthenticatedPatientRoute
-  '/receptionist': typeof AuthenticatedReceptionistRoute
+  '/analytics': typeof AuthenticatedAnalyticsRoute
+  '/track/$trackingCode': typeof TrackTrackingCodeRoute
+  '/receptionist/doctors': typeof AuthenticatedReceptionistDoctorsRoute
+  '/receptionist/intelligence': typeof AuthenticatedReceptionistIntelligenceRoute
+  '/receptionist/patients': typeof AuthenticatedReceptionistPatientsRoute
+  '/receptionist': typeof AuthenticatedReceptionistIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -67,22 +110,51 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
-  '/_authenticated/patient': typeof AuthenticatedPatientRoute
-  '/_authenticated/receptionist': typeof AuthenticatedReceptionistRoute
+  '/_authenticated/analytics': typeof AuthenticatedAnalyticsRoute
+  '/_authenticated/receptionist': typeof AuthenticatedReceptionistRouteWithChildren
+  '/track/$trackingCode': typeof TrackTrackingCodeRoute
+  '/_authenticated/receptionist/doctors': typeof AuthenticatedReceptionistDoctorsRoute
+  '/_authenticated/receptionist/intelligence': typeof AuthenticatedReceptionistIntelligenceRoute
+  '/_authenticated/receptionist/patients': typeof AuthenticatedReceptionistPatientsRoute
+  '/_authenticated/receptionist/': typeof AuthenticatedReceptionistIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/sitemap.xml' | '/patient' | '/receptionist'
+  fullPaths:
+    | '/'
+    | '/auth'
+    | '/sitemap.xml'
+    | '/analytics'
+    | '/receptionist'
+    | '/track/$trackingCode'
+    | '/receptionist/doctors'
+    | '/receptionist/intelligence'
+    | '/receptionist/patients'
+    | '/receptionist/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/sitemap.xml' | '/patient' | '/receptionist'
+  to:
+    | '/'
+    | '/auth'
+    | '/sitemap.xml'
+    | '/analytics'
+    | '/track/$trackingCode'
+    | '/receptionist/doctors'
+    | '/receptionist/intelligence'
+    | '/receptionist/patients'
+    | '/receptionist'
   id:
     | '__root__'
     | '/'
     | '/_authenticated'
     | '/auth'
     | '/sitemap.xml'
-    | '/_authenticated/patient'
+    | '/_authenticated/analytics'
     | '/_authenticated/receptionist'
+    | '/track/$trackingCode'
+    | '/_authenticated/receptionist/doctors'
+    | '/_authenticated/receptionist/intelligence'
+    | '/_authenticated/receptionist/patients'
+    | '/_authenticated/receptionist/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -90,6 +162,7 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  TrackTrackingCodeRoute: typeof TrackTrackingCodeRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -122,6 +195,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/track/$trackingCode': {
+      id: '/track/$trackingCode'
+      path: '/track/$trackingCode'
+      fullPath: '/track/$trackingCode'
+      preLoaderRoute: typeof TrackTrackingCodeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/receptionist': {
       id: '/_authenticated/receptionist'
       path: '/receptionist'
@@ -129,24 +209,75 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedReceptionistRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/patient': {
-      id: '/_authenticated/patient'
-      path: '/patient'
-      fullPath: '/patient'
-      preLoaderRoute: typeof AuthenticatedPatientRouteImport
+    '/_authenticated/analytics': {
+      id: '/_authenticated/analytics'
+      path: '/analytics'
+      fullPath: '/analytics'
+      preLoaderRoute: typeof AuthenticatedAnalyticsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/receptionist/': {
+      id: '/_authenticated/receptionist/'
+      path: '/'
+      fullPath: '/receptionist/'
+      preLoaderRoute: typeof AuthenticatedReceptionistIndexRouteImport
+      parentRoute: typeof AuthenticatedReceptionistRoute
+    }
+    '/_authenticated/receptionist/patients': {
+      id: '/_authenticated/receptionist/patients'
+      path: '/patients'
+      fullPath: '/receptionist/patients'
+      preLoaderRoute: typeof AuthenticatedReceptionistPatientsRouteImport
+      parentRoute: typeof AuthenticatedReceptionistRoute
+    }
+    '/_authenticated/receptionist/intelligence': {
+      id: '/_authenticated/receptionist/intelligence'
+      path: '/intelligence'
+      fullPath: '/receptionist/intelligence'
+      preLoaderRoute: typeof AuthenticatedReceptionistIntelligenceRouteImport
+      parentRoute: typeof AuthenticatedReceptionistRoute
+    }
+    '/_authenticated/receptionist/doctors': {
+      id: '/_authenticated/receptionist/doctors'
+      path: '/doctors'
+      fullPath: '/receptionist/doctors'
+      preLoaderRoute: typeof AuthenticatedReceptionistDoctorsRouteImport
+      parentRoute: typeof AuthenticatedReceptionistRoute
     }
   }
 }
 
+interface AuthenticatedReceptionistRouteChildren {
+  AuthenticatedReceptionistDoctorsRoute: typeof AuthenticatedReceptionistDoctorsRoute
+  AuthenticatedReceptionistIntelligenceRoute: typeof AuthenticatedReceptionistIntelligenceRoute
+  AuthenticatedReceptionistPatientsRoute: typeof AuthenticatedReceptionistPatientsRoute
+  AuthenticatedReceptionistIndexRoute: typeof AuthenticatedReceptionistIndexRoute
+}
+
+const AuthenticatedReceptionistRouteChildren: AuthenticatedReceptionistRouteChildren =
+  {
+    AuthenticatedReceptionistDoctorsRoute:
+      AuthenticatedReceptionistDoctorsRoute,
+    AuthenticatedReceptionistIntelligenceRoute:
+      AuthenticatedReceptionistIntelligenceRoute,
+    AuthenticatedReceptionistPatientsRoute:
+      AuthenticatedReceptionistPatientsRoute,
+    AuthenticatedReceptionistIndexRoute: AuthenticatedReceptionistIndexRoute,
+  }
+
+const AuthenticatedReceptionistRouteWithChildren =
+  AuthenticatedReceptionistRoute._addFileChildren(
+    AuthenticatedReceptionistRouteChildren,
+  )
+
 interface AuthenticatedRouteRouteChildren {
-  AuthenticatedPatientRoute: typeof AuthenticatedPatientRoute
-  AuthenticatedReceptionistRoute: typeof AuthenticatedReceptionistRoute
+  AuthenticatedAnalyticsRoute: typeof AuthenticatedAnalyticsRoute
+  AuthenticatedReceptionistRoute: typeof AuthenticatedReceptionistRouteWithChildren
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
-  AuthenticatedPatientRoute: AuthenticatedPatientRoute,
-  AuthenticatedReceptionistRoute: AuthenticatedReceptionistRoute,
+  AuthenticatedAnalyticsRoute: AuthenticatedAnalyticsRoute,
+  AuthenticatedReceptionistRoute: AuthenticatedReceptionistRouteWithChildren,
 }
 
 const AuthenticatedRouteRouteWithChildren =
@@ -157,7 +288,18 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
+  TrackTrackingCodeRoute: TrackTrackingCodeRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

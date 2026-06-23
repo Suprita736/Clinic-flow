@@ -1,22 +1,11 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
+import { NotificationService } from "./NotificationService";
 
 export type QueueStatus = Database["public"]["Enums"]["queue_status"];
 export type ClinicStatus = Database["public"]["Enums"]["clinic_status"];
 export type QueueEntry = Database["public"]["Tables"]["queue_entries"]["Row"];
 export type ClinicState = Database["public"]["Tables"]["clinic_state"]["Row"];
-
-export interface MyQueueStatus {
-  has_entry: boolean;
-  token_number?: number;
-  my_status?: QueueStatus;
-  people_ahead?: number;
-  currently_serving: number | null;
-  total_waiting: number;
-  estimated_wait_seconds?: number;
-  clinic_status: ClinicStatus;
-  position?: number;
-}
 
 const todayStr = () => new Date().toISOString().slice(0, 10);
 
@@ -27,7 +16,12 @@ export async function fetchTodayEntries(): Promise<QueueEntry[]> {
     .eq("queue_date", todayStr())
     .order("token_number", { ascending: true });
   if (error) throw error;
-  return data ?? [];
+  const entries = (data ?? []) as QueueEntry[];
+  return entries.sort((a, b) => {
+    const timeA = new Date(a.recalled_at || a.created_at).getTime();
+    const timeB = new Date(b.recalled_at || b.created_at).getTime();
+    return timeA - timeB;
+  });
 }
 
 export async function fetchClinicState(): Promise<ClinicState | null> {
@@ -35,43 +29,28 @@ export async function fetchClinicState(): Promise<ClinicState | null> {
   return data ?? null;
 }
 
-export async function getMyQueueStatus(): Promise<MyQueueStatus> {
-  const { data, error } = await supabase.rpc("get_my_queue_status");
-  if (error) throw error;
-  return data as unknown as MyQueueStatus;
-}
-
-export async function addPatient(name: string, phone: string): Promise<void> {
-  const { data: token, error: tErr } = await supabase.rpc("next_token_number");
+export async function addPatient(name: string, phone: string, doctorId: string): Promise<number> {
+  const { data: token, error: tErr } = await supabase.rpc("next_token_number", { p_doctor_id: doctorId });
   if (tErr) throw tErr;
   const { error } = await supabase.from("queue_entries").insert({
     token_number: token as number,
     patient_name: name,
     phone,
     status: "waiting",
+    doctor_id: doctorId,
   });
   if (error) throw error;
+  return token as number;
 }
 
-export async function joinQueue(userId: string, name: string, phone: string): Promise<void> {
-  const { data: token, error: tErr } = await supabase.rpc("next_token_number");
-  if (tErr) throw tErr;
-  const { error } = await supabase.from("queue_entries").insert({
-    token_number: token as number,
-    patient_name: name,
-    phone,
-    user_id: userId,
-    status: "waiting",
-  });
-  if (error) throw error;
-}
 
-async function recalcAverage(): Promise<void> {
+async function recalcAverage(doctorId: string): Promise<void> {
   const { data } = await supabase
     .from("queue_entries")
     .select("served_at, completed_at")
     .eq("queue_date", todayStr())
     .eq("status", "completed")
+    .eq("doctor_id", doctorId)
     .not("served_at", "is", null)
     .not("completed_at", "is", null);
   if (!data || data.length === 0) return;
@@ -84,12 +63,13 @@ async function recalcAverage(): Promise<void> {
     .filter((d) => d > 0);
   if (durations.length === 0) return;
   const avg = Math.round(durations.reduce((a, b) => a + b, 0) / durations.length);
-  await supabase.from("clinic_state").update({ avg_consultation_seconds: avg }).eq("id", 1);
+  await supabase.from("doctors").update({ avg_consultation_seconds: avg }).eq("id", doctorId);
 }
 
-export async function callNext(): Promise<void> {
+export async function callNext(doctorId: string, doctorName: string): Promise<void> {
   const entries = await fetchTodayEntries();
-  const current = entries.find((e) => e.status === "in_progress");
+  const doctorEntries = entries.filter(e => e.doctor_id === doctorId);
+  const current = doctorEntries.find((e) => e.status === "in_progress");
   const now = new Date().toISOString();
 
   if (current) {
@@ -97,33 +77,95 @@ export async function callNext(): Promise<void> {
       .from("queue_entries")
       .update({ status: "completed", completed_at: now })
       .eq("id", current.id);
-    await recalcAverage();
+    await recalcAverage(doctorId);
   }
 
-  const next = entries.find((e) => e.status === "waiting");
+  const next = doctorEntries.find((e) => e.status === "waiting");
   if (next) {
     await supabase
       .from("queue_entries")
       .update({ status: "in_progress", served_at: now })
       .eq("id", next.id);
-    await supabase.from("clinic_state").update({ currently_serving: next.token_number }).eq("id", 1);
+    await supabase.from("doctors").update({ currently_serving: next.token_number }).eq("id", doctorId);
   } else {
-    await supabase.from("clinic_state").update({ currently_serving: null }).eq("id", 1);
+    await supabase.from("doctors").update({ currently_serving: null }).eq("id", doctorId);
+  }
+
+  // Trigger notifications for the next ones in line
+  const waitingEntries = doctorEntries.filter((e) => e.status === "waiting" && e.id !== next?.id);
+  
+  if (waitingEntries.length > 0) {
+    const youAreNextPatient = waitingEntries[0];
+    NotificationService.sendYouAreNext(youAreNextPatient.patient_name, doctorName);
+  }
+
+  if (waitingEntries.length > 2) {
+    const threeAwayPatient = waitingEntries[2];
+    const { data: docData } = await supabase.from("doctors").select("avg_consultation_seconds").eq("id", doctorId).single();
+    const fallbackAvg = docData?.avg_consultation_seconds ? Math.round(docData.avg_consultation_seconds / 60) : 8;
+    NotificationService.sendThreeAway(threeAwayPatient.patient_name, 3 * fallbackAvg, doctorName);
   }
 }
 
-export async function skipPatient(id: string): Promise<void> {
+export async function skipPatient(id: string, doctorId: string): Promise<void> {
   await supabase.from("queue_entries").update({ status: "skipped" }).eq("id", id);
-  // Nudge clinic_state so every patient's live position recalculates.
-  await supabase.from("clinic_state").update({ updated_at: new Date().toISOString() }).eq("id", 1);
+  // Nudge doctors table so every patient's live position recalculates.
+  await supabase.from("doctors").update({ is_active: true }).eq("id", doctorId);
 }
 
-export async function completePatient(id: string): Promise<void> {
+export async function completePatient(id: string, doctorId: string): Promise<void> {
   await supabase
     .from("queue_entries")
     .update({ status: "completed", completed_at: new Date().toISOString() })
     .eq("id", id);
-  await recalcAverage();
+  await recalcAverage(doctorId);
+}
+
+export async function recallPatient(id: string, doctorId: string): Promise<void> {
+  await supabase
+    .from("queue_entries")
+    .update({
+      status: "waiting",
+      recalled_at: new Date().toISOString(),
+    })
+    .eq("id", id);
+  // Nudge doctors table so every patient's live position recalculates.
+  await supabase.from("doctors").update({ is_active: true }).eq("id", doctorId);
+}
+
+export async function markNoShowAndAdvance(id: string, doctorId: string, doctorName: string): Promise<void> {
+  // Mark the patient as no_show
+  await supabase.from("queue_entries").update({ status: "no_show" }).eq("id", id);
+  
+  // And then call the next patient
+  const entries = await fetchTodayEntries();
+  const doctorEntries = entries.filter(e => e.doctor_id === doctorId);
+  const next = doctorEntries.find((e) => e.status === "waiting");
+  const now = new Date().toISOString();
+  if (next) {
+    await supabase
+      .from("queue_entries")
+      .update({ status: "in_progress", served_at: now })
+      .eq("id", next.id);
+    await supabase.from("doctors").update({ currently_serving: next.token_number }).eq("id", doctorId);
+  } else {
+    await supabase.from("doctors").update({ currently_serving: null }).eq("id", doctorId);
+  }
+
+  // Trigger notifications for the next ones in line
+  const waitingEntries = doctorEntries.filter((e) => e.status === "waiting" && e.id !== next?.id && e.id !== id);
+  
+  if (waitingEntries.length > 0) {
+    const youAreNextPatient = waitingEntries[0];
+    NotificationService.sendYouAreNext(youAreNextPatient.patient_name, doctorName);
+  }
+
+  if (waitingEntries.length > 2) {
+    const threeAwayPatient = waitingEntries[2];
+    const { data: docData } = await supabase.from("doctors").select("avg_consultation_seconds").eq("id", doctorId).single();
+    const fallbackAvg = docData?.avg_consultation_seconds ? Math.round(docData.avg_consultation_seconds / 60) : 8;
+    NotificationService.sendThreeAway(threeAwayPatient.patient_name, 3 * fallbackAvg, doctorName);
+  }
 }
 
 export async function setClinicStatus(status: ClinicStatus): Promise<void> {
