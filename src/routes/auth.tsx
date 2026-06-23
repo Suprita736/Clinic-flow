@@ -15,9 +15,16 @@ import authImage from "@/assets/auth-illustration.jpg";
 export const Route = createFileRoute("/auth")({
   head: () => ({
     meta: [
-      { title: "Sign in — ClinicFlow" },
+      { title: "ClinicFlow" },
       { name: "description", content: "Sign in or create your ClinicFlow account to manage clinic queues." },
     ],
+    link: [
+      {
+        rel: "icon",
+        type: "image/svg+xml",
+        href: "/favicon.svg",
+      }
+    ]
   }),
   component: AuthPage,
 });

@@ -24,7 +24,7 @@ import heroImage from "@/assets/hero-queue.jpg";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "ClinicFlow — Smart Queue Management for Clinics" },
+      { title: "ClinicFlow" },
       {
         name: "description",
         content:
@@ -40,6 +40,13 @@ export const Route = createFileRoute("/")({
       { property: "og:image", content: heroImage },
       { name: "twitter:card", content: "summary_large_image" },
     ],
+    link: [
+      {
+        rel: "icon",
+        type: "image/svg+xml",
+        href: "/favicon.svg",
+      }
+    ]
   }),
   component: Landing,
 });
@@ -157,27 +164,24 @@ function Landing() {
           {STATS.map((s, i) => (
             <div
               key={s.value}
-              className={`relative overflow-hidden rounded-3xl p-8 shadow-card ${
-                i === 1
-                  ? "bg-primary text-primary-foreground"
-                  : i === 2
-                    ? "bg-mint text-mint-foreground"
-                    : "bg-card text-foreground"
-              }`}
+              className={`relative overflow-hidden rounded-3xl p-8 shadow-card ${i === 1
+                ? "bg-primary text-primary-foreground"
+                : i === 2
+                  ? "bg-mint text-mint-foreground"
+                  : "bg-card text-foreground"
+                }`}
             >
               <Plus
-                className={`absolute right-6 top-6 h-6 w-6 ${
-                  i === 1 ? "text-primary-foreground/60" : "text-foreground/30"
-                }`}
+                className={`absolute right-6 top-6 h-6 w-6 ${i === 1 ? "text-primary-foreground/60" : "text-foreground/30"
+                  }`}
                 strokeWidth={1.5}
               />
               <p className="font-display text-5xl font-semibold tracking-tight sm:text-6xl">
                 {s.value}
               </p>
               <p
-                className={`mt-5 max-w-[16rem] text-sm leading-relaxed ${
-                  i === 1 ? "text-primary-foreground/80" : "text-muted-foreground"
-                }`}
+                className={`mt-5 max-w-[16rem] text-sm leading-relaxed ${i === 1 ? "text-primary-foreground/80" : "text-muted-foreground"
+                  }`}
               >
                 {s.label}
               </p>

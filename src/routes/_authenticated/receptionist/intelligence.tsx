@@ -187,7 +187,7 @@ function AnalyticsDashboard() {
     >
       <div className="mt-8">
         <h3 className="text-lg font-semibold mb-4">Patient Intelligence</h3>
-        <div className="grid gap-4 sm:grid-cols-3">
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-3">
           <MetricCard
             icon={<UsersRound className="h-5 w-5" />}
             label="Total Registered Patients"
@@ -241,7 +241,7 @@ function AnalyticsDashboard() {
       </div>
 
       <h3 className="text-xl font-semibold mb-4 mt-8">Today's Performance</h3>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         <MetricCard 
           icon={<Users className="h-5 w-5" />} 
           label="Total Patients" 
@@ -267,7 +267,7 @@ function AnalyticsDashboard() {
       </div>
 
       <h3 className="text-xl font-semibold mb-4 mt-8">Operational Insights</h3>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         <MetricCard 
           icon={<LineChart className="h-5 w-5" />} 
           label="Throughput" 

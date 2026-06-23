@@ -13,7 +13,7 @@ export const Route = createFileRoute("/_authenticated/receptionist/doctors")({
 });
 
 function DoctorsManagement() {
-  const { doctors, loading, addDoctor, editDoctor, deleteDoctor } = useDoctors();
+  const { allDoctors, loading, addDoctor, editDoctor, deleteDoctor } = useDoctors();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState("");
@@ -21,7 +21,7 @@ function DoctorsManagement() {
   const [isActive, setIsActive] = useState(true);
   const [busy, setBusy] = useState(false);
 
-  const openModal = (doc?: typeof doctors[0]) => {
+  const openModal = (doc?: typeof allDoctors[0]) => {
     if (doc) {
       setEditingId(doc.id);
       setName(doc.name);
@@ -91,7 +91,7 @@ function DoctorsManagement() {
 
       <Card className="p-0">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
+          <table className="w-full min-w-[700px] text-left text-sm">
             <thead>
               <tr className="border-b border-border/60 bg-secondary/40 text-xs uppercase tracking-wide text-muted-foreground">
                 <th className="px-6 py-4 font-medium">Doctor</th>
@@ -102,14 +102,15 @@ function DoctorsManagement() {
               </tr>
             </thead>
             <tbody>
-              {doctors.map(doc => (
+              {allDoctors.map(doc => (
                 <tr key={doc.id} className="border-b border-border/40 last:border-0 hover:bg-secondary/20">
                   <td className="px-6 py-4 font-medium text-foreground">{doc.name}</td>
                   <td className="px-6 py-4 text-muted-foreground">{doc.specialization || "—"}</td>
                   <td className="px-6 py-4">
-                    <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-                      doc.is_active ? "bg-mint/10 text-mint-foreground" : "bg-destructive/10 text-destructive"
+                    <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                      doc.is_active ? "bg-mint/10 text-mint-foreground" : "bg-secondary text-muted-foreground"
                     }`}>
+                      <span className={`h-1.5 w-1.5 rounded-full ${doc.is_active ? "bg-mint animate-pulse" : "bg-muted-foreground"}`} />
                       {doc.is_active ? "Active" : "Inactive"}
                     </span>
                   </td>
@@ -128,7 +129,7 @@ function DoctorsManagement() {
                   </td>
                 </tr>
               ))}
-              {doctors.length === 0 && (
+              {allDoctors.length === 0 && (
                 <tr>
                   <td colSpan={5} className="px-6 py-10 text-center text-muted-foreground">
                     No doctors found.

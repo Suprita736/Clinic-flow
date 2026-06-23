@@ -5,22 +5,21 @@ import type { Database } from "@/integrations/supabase/types";
 export type DoctorRow = Database["public"]["Tables"]["doctors"]["Row"];
 
 export function useDoctors() {
-  const [doctors, setDoctors] = useState<DoctorRow[]>([]);
+  const [allDoctors, setAllDoctors] = useState<DoctorRow[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchDoctors = useCallback(async (includeInactive = false) => {
+  const fetchDoctors = useCallback(async () => {
     try {
-      let query = supabase.from("doctors").select("*").order("name", { ascending: true });
-      if (!includeInactive) {
-        query = query.eq("is_active", true);
-      }
-      const { data, error } = await query;
+      const { data, error } = await supabase
+        .from("doctors")
+        .select("*")
+        .order("name", { ascending: true });
 
       if (error) {
         console.error("[useDoctors] fetch failed:", error.message, error.code, error.details);
         throw error;
       }
-      setDoctors((data as DoctorRow[]) || []);
+      setAllDoctors((data as DoctorRow[]) || []);
     } catch (err) {
       console.error("[useDoctors] Error fetching doctors:", err);
     } finally {
@@ -31,6 +30,9 @@ export function useDoctors() {
   useEffect(() => {
     fetchDoctors();
   }, [fetchDoctors]);
+
+  // Active-only doctors for dropdowns / queue assignment
+  const doctors = allDoctors.filter(d => d.is_active);
 
   const updateDoctorStatus = async (doctorId: string, paused: boolean) => {
     const nextStatus = paused ? "paused" : "active";
@@ -60,7 +62,7 @@ export function useDoctors() {
       status: "active",
     });
     if (error) throw error;
-    await fetchDoctors(true);
+    await fetchDoctors();
   };
 
   const editDoctor = async (id: string, name: string, specialization: string, is_active: boolean) => {
@@ -70,7 +72,7 @@ export function useDoctors() {
       is_active,
     }).eq("id", id);
     if (error) throw error;
-    await fetchDoctors(true);
+    await fetchDoctors();
   };
 
   const deleteDoctor = async (id: string) => {
@@ -89,11 +91,11 @@ export function useDoctors() {
       throw new Error("Cannot delete doctor with active queue entries today. Please complete or reassign them first.");
     }
 
-    // Soft delete to preserve historical records
-    const { error } = await supabase.from("doctors").update({ is_active: false }).eq("id", id);
+    // Actually delete the doctor row
+    const { error } = await supabase.from("doctors").delete().eq("id", id);
     if (error) throw error;
-    await fetchDoctors(true);
+    await fetchDoctors();
   };
 
-  return { doctors, loading, fetchDoctors, updateDoctorStatus, updateDoctorConsultationTime, addDoctor, editDoctor, deleteDoctor };
+  return { doctors, allDoctors, loading, fetchDoctors, updateDoctorStatus, updateDoctorConsultationTime, addDoctor, editDoctor, deleteDoctor };
 }

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import {
   Loader2,
   Users,
@@ -12,6 +12,10 @@ import {
   Play,
   X,
   QrCode,
+  Stethoscope,
+  Activity,
+  AlertTriangle,
+  SkipForward,
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { toast } from "sonner";
@@ -58,7 +62,6 @@ const STATUS_LABEL: Record<string, string> = {
 
 function ReceptionistDashboard() {
   const { role, loading: authLoading } = useAuth();
-  const navigate = useNavigate();
 
   const { tokens, loading: queueLoading, fetchTokens } = useQueue();
   const { doctors, loading: docsLoading, updateDoctorStatus } = useDoctors();
@@ -206,10 +209,10 @@ function ReceptionistDashboard() {
       }
       const { tokenNumber, trackingCode } = await addPatient(name.trim(), phone.trim(), formDoctorId);
       toast.success("Patient added & token generated");
-      
+
       const dName = doctors.find(d => d.id === formDoctorId)?.name || "";
       const dSpec = doctors.find(d => d.id === formDoctorId)?.specialization || "";
-      
+
       NotificationService.sendTokenCreated(name.trim(), tokenNumber, trackingCode, dName);
       setName("");
       setPhone("");
@@ -261,14 +264,14 @@ function ReceptionistDashboard() {
       </div>
 
       {/* Top metrics */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         <MetricCard icon={<Users className="h-5 w-5" />} label="Patients Waiting" value={metrics.waiting} tone="primary" />
         <MetricCard icon={<CheckCircle2 className="h-5 w-5" />} label="Served Today" value={metrics.served} />
         <MetricCard icon={<Clock className="h-5 w-5" />} label="Avg Consultation" value={avgWait} tone="mint" />
         <MetricCard icon={<UserX className="h-5 w-5" />} label="Skipped / No Shows" value={metrics.noShows} />
       </div>
 
-      <div className="mt-4 grid gap-4 lg:grid-cols-3">
+      <div className="mt-4 grid gap-4 grid-cols-1 lg:grid-cols-3">
         {/* Add patient */}
         <Card>
           <div className="flex items-center gap-2">
@@ -279,17 +282,17 @@ function ReceptionistDashboard() {
           <form onSubmit={handleAdd} className="mt-5 space-y-4">
             <div className="space-y-1.5 relative">
               <Label htmlFor="p-name">Patient Name</Label>
-              <Input 
-                id="p-name" 
-                value={name} 
+              <Input
+                id="p-name"
+                value={name}
                 onChange={(e) => {
                   setName(e.target.value);
                   setShowSuggestions(true);
-                }} 
+                }}
                 onFocus={() => setShowSuggestions(true)}
                 onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
-                placeholder="John Doe" 
-                maxLength={100} 
+                placeholder="John Doe"
+                maxLength={100}
                 autoComplete="off"
               />
               {showSuggestions && patientSuggestions.length > 0 && (
@@ -335,23 +338,44 @@ function ReceptionistDashboard() {
         </Card>
 
         {/* Queue controls */}
-        <Card className="lg:col-span-2">
-          <h3 className="text-base font-semibold text-foreground">Queue Controls</h3>
-          <p className="mt-1.5 text-sm text-muted-foreground">
-            Status:{" "}
-            <span className="font-medium text-foreground capitalize">
-              {clinicStatus}
+        <Card className="lg:col-span-2 flex flex-col gap-0">
+          {/* Active Doctor Context */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
+                <Stethoscope className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <p className="text-xs uppercase tracking-wider text-muted-foreground">Managing Queue</p>
+                <p className="text-base font-semibold text-foreground">{selectedDoctor?.name || "No Doctor Selected"}</p>
+                {selectedDoctor?.specialization && (
+                  <p className="text-xs text-muted-foreground">{selectedDoctor.specialization}</p>
+                )}
+              </div>
+            </div>
+            <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${
+              isPaused
+                ? "bg-amber-500/10 text-amber-600"
+                : "bg-mint/10 text-mint-foreground"
+            }`}>
+              <span className={`h-1.5 w-1.5 rounded-full ${isPaused ? "bg-amber-500" : "bg-mint animate-pulse"}`} />
+              {isPaused ? "Paused" : "Active"}
             </span>
-          </p>
+          </div>
 
+          {/* Divider */}
+          <div className="border-t border-border/50 my-4" />
+
+          {/* No Doctor Selected State */}
           {!selectedDoctor && (
-            <div className="mt-4 text-sm text-muted-foreground p-4 bg-secondary rounded-xl">
+            <div className="text-sm text-muted-foreground p-4 bg-secondary rounded-xl">
               Please select a doctor to manage their queue.
             </div>
           )}
 
+          {/* No-Show Alert */}
           {selectedDoctor && countdownSeconds === 0 && inProgressEntry && inProgressEntry.id !== dismissedNoShowId && (
-            <div className="mt-4 rounded-md bg-destructive/10 p-4 border border-destructive/20 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="mb-4 rounded-xl bg-destructive/10 p-4 border border-destructive/20 flex flex-col sm:flex-row items-center justify-between gap-4">
               <div>
                 <p className="font-semibold text-destructive">No Show Detected?</p>
                 <p className="text-sm text-destructive/80">
@@ -365,7 +389,8 @@ function ReceptionistDashboard() {
             </div>
           )}
 
-          <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {/* Action Buttons */}
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <Button variant="hero" className="col-span-1" disabled={busy || !selectedDoctor} onClick={() => wrap(() => callNext(globalDoctorId), "Called next patient")}>
               Call Next <ChevronRight className="h-4 w-4" />
             </Button>
@@ -386,6 +411,75 @@ function ReceptionistDashboard() {
             >
               <Pause className="h-4 w-4" /> Pause
             </Button>
+          </div>
+
+          {/* Divider */}
+          <div className="border-t border-border/50 my-4" />
+
+          {/* Current Consultation */}
+          <div>
+            <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Current Consultation</h4>
+            {inProgressEntry ? (
+              <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
+                      <span className="text-lg font-bold text-primary">#{inProgressEntry.token_number}</span>
+                    </div>
+                    <div>
+                      <p className="font-semibold text-foreground">{inProgressEntry.patient_name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {selectedDoctor?.name}{selectedDoctor?.specialization ? ` · ${selectedDoctor.specialization}` : ""}
+                      </p>
+                    </div>
+                  </div>
+                  {inProgressEntry.served_at && (
+                    <div className="text-right">
+                      <p className="text-xs text-muted-foreground">Started</p>
+                      <p className="text-sm font-semibold text-foreground">
+                        {formatWait(Math.floor((nowTime - new Date(inProgressEntry.served_at).getTime()) / 1000))} ago
+                      </p>
+                      {countdownSeconds > 0 && (
+                        <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-600">
+                          <Clock className="h-3 w-3" /> {countdownSeconds}s
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-xl border border-border/50 bg-secondary/30 p-5 text-center">
+                <Activity className="h-6 w-6 mx-auto text-muted-foreground/40 mb-2" />
+                <p className="text-sm text-muted-foreground">No patient is currently being consulted.</p>
+              </div>
+            )}
+          </div>
+
+          {/* Divider */}
+          <div className="border-t border-border/50 my-4" />
+
+          {/* Queue Summary */}
+          <div>
+            <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Queue Summary</h4>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="rounded-xl bg-secondary/50 p-3 text-center">
+                <p className="text-2xl font-bold text-primary">{doctorTokens.filter(t => t.status === "waiting").length}</p>
+                <p className="text-xs text-muted-foreground">Waiting</p>
+              </div>
+              <div className="rounded-xl bg-primary/5 border border-primary/10 p-3 text-center">
+                <p className="text-2xl font-bold text-primary">{inProgressEntry ? 1 : 0}</p>
+                <p className="text-xs text-muted-foreground">In Progress</p>
+              </div>
+              <div className="rounded-xl bg-mint/5 border border-mint/10 p-3 text-center">
+                <p className="text-2xl font-bold text-mint-foreground">{doctorTokens.filter(t => t.status === "completed").length}</p>
+                <p className="text-xs text-muted-foreground">Completed</p>
+              </div>
+              <div className="rounded-xl bg-secondary/50 p-3 text-center">
+                <p className="text-2xl font-bold text-foreground">{doctorTokens.filter(t => t.status === "skipped" || t.status === "no_show").length}</p>
+                <p className="text-xs text-muted-foreground">Skipped / No-Show</p>
+              </div>
+            </div>
           </div>
         </Card>
       </div>
@@ -493,10 +587,10 @@ function ReceptionistDashboard() {
                 </a>
               </div>
 
-              <TokenSlipActions 
-                tokenNumber={selectedQRToken.tokenNumber} 
-                patientName={selectedQRToken.patientName} 
-                trackingCode={selectedQRToken.trackingCode} 
+              <TokenSlipActions
+                tokenNumber={selectedQRToken.tokenNumber}
+                patientName={selectedQRToken.patientName}
+                trackingCode={selectedQRToken.trackingCode}
                 doctorName={selectedQRToken.doctorName}
                 doctorSpecialization={selectedQRToken.doctorSpecialization}
               />

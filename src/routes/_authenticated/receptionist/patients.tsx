@@ -33,7 +33,7 @@ function PatientsRegistry() {
 
   return (
     <DashboardShell title="Patient Registry" subtitle="Clinic-wide patient history" badge="Registry" hideHeader={true}>
-      <div className="mb-6 flex justify-between items-center">
+      <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div className="relative w-full max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input 
@@ -50,7 +50,7 @@ function PatientsRegistry() {
 
       <Card className="p-0">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
+          <table className="w-full min-w-[700px] text-left text-sm">
             <thead>
               <tr className="border-b border-border/60 bg-secondary/40 text-xs uppercase tracking-wide text-muted-foreground">
                 <th className="px-6 py-4 font-medium">Patient Name</th>

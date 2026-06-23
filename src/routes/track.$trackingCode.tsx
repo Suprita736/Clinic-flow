@@ -4,6 +4,7 @@ import { QrCode, Clock, Users, Activity, Loader2, User, CheckCircle, AlertTriang
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/clinic/DashboardShell";
 import { formatWait } from "@/lib/queue";
+import { NotificationService } from "@/lib/NotificationService";
 
 export const Route = createFileRoute("/track/$trackingCode")({
   component: TrackByCodePage,
@@ -15,6 +16,34 @@ function TrackByCodePage() {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
+  const [previousStatus, setPreviousStatus] = useState<string | null>(null);
+
+  useEffect(() => {
+    if ("Notification" in window && Notification.permission === "default") {
+      Notification.requestPermission();
+    }
+  }, []);
+
+  useEffect(() => {
+    if (data && previousStatus !== data.status) {
+      if (previousStatus === "waiting" && data.status === "in_progress") {
+        NotificationService.notifyPatientCalled(data.patient_name, data.token_number, data.doctor_name);
+        if ("Notification" in window && Notification.permission === "granted") {
+          new Notification("ClinicFlow", {
+            body: `It's your turn with ${data.doctor_name}. Please proceed to the consultation room.`,
+          });
+        }
+      } else if (previousStatus === "in_progress" && data.status === "completed") {
+        NotificationService.notifyConsultationComplete(data.patient_name, data.doctor_name);
+        if ("Notification" in window && Notification.permission === "granted") {
+          new Notification("ClinicFlow", {
+            body: `Consultation Complete. Thank you for visiting!`,
+          });
+        }
+      }
+      setPreviousStatus(data.status);
+    }
+  }, [data, previousStatus]);
 
   // Use a ref so the Supabase realtime callback always calls the LATEST
   // fetchStatus — avoiding stale closure issues.

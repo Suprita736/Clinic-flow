@@ -33,5 +33,23 @@ export const NotificationService = {
       description: msg,
       duration: 8000,
     });
+  },
+
+  notifyPatientCalled(patientName: string, tokenNumber: number, doctorName: string) {
+    const msg = `It's your turn. Please proceed to ${doctorName}.`;
+    console.log(`[SMS] To: ${patientName}\nMessage: ${msg}`);
+    toast("🔔 It's Your Turn!", {
+      description: `Token #${tokenNumber} is ready for ${doctorName}.`,
+      duration: 8000,
+    });
+  },
+
+  notifyConsultationComplete(patientName: string, doctorName: string) {
+    const msg = `Thank you for visiting ClinicFlow. We hope you have a great day.`;
+    console.log(`[SMS] To: ${patientName}\nMessage: ${msg}`);
+    toast("✅ Consultation Complete", {
+      description: `Thank you for seeing ${doctorName}.`,
+      duration: 6000,
+    });
   }
 };
