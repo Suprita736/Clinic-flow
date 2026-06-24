@@ -93,7 +93,7 @@ export async function callNext(doctorId: string, doctorName: string): Promise<vo
 
   // Trigger notifications for the next ones in line
   const waitingEntries = doctorEntries.filter((e) => e.status === "waiting" && e.id !== next?.id);
-  
+
   if (waitingEntries.length > 0) {
     const youAreNextPatient = waitingEntries[0];
     NotificationService.sendYouAreNext(youAreNextPatient.patient_name, doctorName);
@@ -136,7 +136,7 @@ export async function recallPatient(id: string, doctorId: string): Promise<void>
 export async function markNoShowAndAdvance(id: string, doctorId: string, doctorName: string): Promise<void> {
   // Mark the patient as no_show
   await supabase.from("queue_entries").update({ status: "no_show" }).eq("id", id);
-  
+
   // And then call the next patient
   const entries = await fetchTodayEntries();
   const doctorEntries = entries.filter(e => e.doctor_id === doctorId);
@@ -154,7 +154,7 @@ export async function markNoShowAndAdvance(id: string, doctorId: string, doctorN
 
   // Trigger notifications for the next ones in line
   const waitingEntries = doctorEntries.filter((e) => e.status === "waiting" && e.id !== next?.id && e.id !== id);
-  
+
   if (waitingEntries.length > 0) {
     const youAreNextPatient = waitingEntries[0];
     NotificationService.sendYouAreNext(youAreNextPatient.patient_name, doctorName);
@@ -173,10 +173,20 @@ export async function setClinicStatus(status: ClinicStatus): Promise<void> {
 }
 
 export function formatWait(seconds?: number | null): string {
-  if (!seconds || seconds <= 0) return "0 min";
-  const mins = Math.round(seconds / 60);
-  if (mins < 60) return `${mins} min`;
+  if (!seconds || seconds <= 0) return "0 sec";
+
+  if (seconds < 60) {
+    return `${seconds} sec`;
+  }
+
+  const mins = Math.floor(seconds / 60);
+
+  if (mins < 60) {
+    return `${mins} min`;
+  }
+
   const h = Math.floor(mins / 60);
   const m = mins % 60;
+
   return m ? `${h}h ${m}m` : `${h}h`;
 }
