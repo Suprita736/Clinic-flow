@@ -175,11 +175,13 @@ export async function setClinicStatus(status: ClinicStatus): Promise<void> {
 export function formatWait(seconds?: number | null): string {
   if (!seconds || seconds <= 0) return "0 sec";
 
-  if (seconds < 60) {
-    return `${seconds} sec`;
+  const rounded = Math.round(seconds);
+
+  if (rounded < 60) {
+    return `${rounded} sec`;
   }
 
-  const mins = Math.floor(seconds / 60);
+  const mins = Math.floor(rounded / 60);
 
   if (mins < 60) {
     return `${mins} min`;
